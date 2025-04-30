@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+  <!-- Navbar -->
+  <nav class="bg-white shadow p-4 flex justify-between items-center">
+    <div class="text-2xl font-bold">Spreadsheet Splitter</div>
+    <div id="user-controls" class="space-x-4">
+      <button id="signin-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Sign In</button>
+    </div>
+  </nav>
+  <!-- Sign In Modal -->
+  <div id="signin-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl p-6 w-96">
+      <h2 class="text-xl font-semibold mb-4">Sign In</h2>
+      <form id="signin-form" class="space-y-4">
+        <input id="email" type="email" placeholder="Email" required class="w-full p-2 border rounded"/>
+        <input id="password" type="password" placeholder="Password" required class="w-full p-2 border rounded"/>
+        <button type="submit" class="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Sign In</button>
+      </form>
+      <button id="close-modal" class="mt-4 text-sm text-gray-500 hover:underline">Cancel</button>
+    </div>
+  </div>
+  <!-- Main content -->
+  <main class="flex-grow container mx-auto p-6">
+    <div class="bg-white p-6 rounded-xl shadow space-y-6">
+      <div>
+        <label class="block text-sm font-medium mb-1">Upload CSV or Excel file</label>
+        <input id="file-input" type="file" accept=".csv, .xls, .xlsx" class="block w-full text-gray-700"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Split by</label>
+        <div class="flex items-center space-x-4">
+          <button id="split-columns-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none">Columns</button>
+          <button id="split-rows-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none">Rows</button>
+        </div>
+      </div>
+      <div id="selection-input" class="hidden">
+        <label id="selection-label" class="block text-sm font-medium mb-1">Enter selections (comma separated)</label>
+        <input id="selections" type="text" placeholder="e.g. A,B" class="w-full p-2 border rounded"/>
+      </div>
+      <div>
+        <button id="run-split" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700" disabled>Run Split</button>
+      </div>
+      <div id="download-links" class="space-y-2"></div>
+    </div>
+  </main>
+  <footer class="bg-white text-center p-4 text-sm text-gray-500">© 2025 Spreadsheet Splitter</footer>
+
+  <script>
+    // Handle modal
+    const signinBtn = document.getElementById('signin-btn');
+    const modal = document.getElementById('signin-modal');
+    const closeModal = document.getElementById('close-modal');
+    signinBtn.addEventListener('click', () => modal.classList.remove('hidden'));
+    closeModal.addEventListener('click', () => modal.classList.add('hidden'));
+    document.getElementById('signin-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      // Call Cloudflare Worker API
+      try {
+        const res = await fetch('/api/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        if (res.ok) {
+          const user = await res.json();
+          document.getElementById('user-controls').innerHTML = `<span>${user.email}</span>`;
+          modal.classList.add('hidden');
+        } else alert('Sign in failed');
+      } catch (err) {
+        console.error(err);
+        alert('Error signing in');
+      }
+    });
+
+    // Split logic
+    let workbook;
+    const input = document.getElementById('file-input');
+    const splitColumnsBtn = document.getElementById('split-columns-btn');
+    const splitRowsBtn = document.getElementById('split-rows-btn');
+    const selectionInput = document.getElementById('selection-input');
+    const selectionLabel = document.getElementById('selection-label');
+    const runBtn = document.getElementById('run-split');
+    let mode = '';
+
+    input.addEventListener('change', e => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const data = new Uint8Array(evt.target.result);
+        workbook = XLSX.read(data, { type: 'array' });
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    splitColumnsBtn.addEventListener('click', () => {
+      mode = 'columns';
+      selectionLabel.textContent = 'Enter column names (comma separated)';
+      selectionInput.classList.remove('hidden');
+      runBtn.disabled = false;
+    });
+    splitRowsBtn.addEventListener('click', () => {
+      mode = 'rows';
+      selectionLabel.textContent = 'Enter row numbers (comma separated)';
+      selectionInput.classList.remove('hidden');
+      runBtn.disabled = false;
+    });
+
+    runBtn.addEventListener('click', () => {
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const selections = document.getElementById('selections').value.split(',').map(s => s.trim());
+      const links = document.getElementById('download-links');
+      links.innerHTML = '';
+
+      if (mode === 'columns') {
+        const headers = json[0];
+        selections.forEach(col => {
+          const idx = headers.findIndex(h => h == col);
+          if (idx > -1) {
+            const newData = json.map(row => [row[idx]]);
+            const newWs = XLSX.utils.aoa_to_sheet(newData);
+            const newWb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWb, newWs, col);
+            const wbout = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${col}.xlsx`;
+            a.textContent = `Download ${col}`;
+            a.className = 'block text-blue-600 hover:underline';
+            links.appendChild(a);
+          }
+        });
+      } else if (mode === 'rows') {
+        const dataRows = json.slice(1);
+        selections.forEach(r => {
+          const idx = parseInt(r) - 1;
+          if (idx >= 0 && idx < dataRows.length) {
+            const newData = [json[0], dataRows[idx]];
+            const newWs = XLSX.utils.aoa_to_sheet(newData);
+            const newWb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWb, newWs, `Row${r}`);
+            const wbout = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `row_${r}.xlsx`;
+            a.textContent = `Download row ${r}`;
+            a.className = 'block text-blue-600 hover:underline';
+            links.appendChild(a);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
