@@ -12,8 +12,10 @@
     <div class="text-2xl font-bold">Spreadsheet Splitter</div>
     <div id="user-controls" class="space-x-4">
       <button id="signin-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Sign In</button>
+      <button id="signup-btn" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Sign Up</button>
     </div>
   </nav>
+
   <!-- Sign In Modal -->
   <div id="signin-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
     <div class="bg-white rounded-xl p-6 w-96">
@@ -23,9 +25,23 @@
         <input id="password" type="password" placeholder="Password" required class="w-full p-2 border rounded"/>
         <button type="submit" class="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Sign In</button>
       </form>
-      <button id="close-modal" class="mt-4 text-sm text-gray-500 hover:underline">Cancel</button>
+      <button id="close-signin" class="mt-4 text-sm text-gray-500 hover:underline">Cancel</button>
     </div>
   </div>
+
+  <!-- Sign Up Modal -->
+  <div id="signup-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl p-6 w-96">
+      <h2 class="text-xl font-semibold mb-4">Create Account</h2>
+      <form id="signup-form" class="space-y-4">
+        <input id="su-email" type="email" placeholder="Email" required class="w-full p-2 border rounded"/>
+        <input id="su-password" type="password" placeholder="Password" required class="w-full p-2 border rounded"/>
+        <button type="submit" class="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700">Sign Up</button>
+      </form>
+      <button id="close-signup" class="mt-4 text-sm text-gray-500 hover:underline">Cancel</button>
+    </div>
+  </div>
+
   <!-- Main content -->
   <main class="flex-grow container mx-auto p-6">
     <div class="bg-white p-6 rounded-xl shadow space-y-6">
@@ -36,8 +52,8 @@
       <div>
         <label class="block text-sm font-medium mb-1">Split by</label>
         <div class="flex items-center space-x-4">
-          <button id="split-columns-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none">Columns</button>
-          <button id="split-rows-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none">Rows</button>
+          <button id="split-columns-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Columns</button>
+          <button id="split-rows-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Rows</button>
         </div>
       </div>
       <div id="selection-input" class="hidden">
@@ -50,20 +66,20 @@
       <div id="download-links" class="space-y-2"></div>
     </div>
   </main>
+
   <footer class="bg-white text-center p-4 text-sm text-gray-500">© 2025 Spreadsheet Splitter</footer>
 
   <script>
-    // Handle modal
+    // --- Auth Modals & Forms ---
     const signinBtn = document.getElementById('signin-btn');
-    const modal = document.getElementById('signin-modal');
-    const closeModal = document.getElementById('close-modal');
-    signinBtn.addEventListener('click', () => modal.classList.remove('hidden'));
-    closeModal.addEventListener('click', () => modal.classList.add('hidden'));
+    const signinModal = document.getElementById('signin-modal');
+    const closeSignin = document.getElementById('close-signin');
+    signinBtn.addEventListener('click', () => signinModal.classList.remove('hidden'));
+    closeSignin.addEventListener('click', () => signinModal.classList.add('hidden'));
     document.getElementById('signin-form').addEventListener('submit', async e => {
       e.preventDefault();
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      // Call Cloudflare Worker API
       try {
         const res = await fetch('/api/signin', {
           method: 'POST',
@@ -73,15 +89,45 @@
         if (res.ok) {
           const user = await res.json();
           document.getElementById('user-controls').innerHTML = `<span>${user.email}</span>`;
-          modal.classList.add('hidden');
-        } else alert('Sign in failed');
+          signinModal.classList.add('hidden');
+        } else {
+          alert('Sign in failed');
+        }
       } catch (err) {
         console.error(err);
         alert('Error signing in');
       }
     });
 
-    // Split logic
+    const signupBtn = document.getElementById('signup-btn');
+    const signupModal = document.getElementById('signup-modal');
+    const closeSignup = document.getElementById('close-signup');
+    signupBtn.addEventListener('click', () => signupModal.classList.remove('hidden'));
+    closeSignup.addEventListener('click', () => signupModal.classList.add('hidden'));
+    document.getElementById('signup-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = document.getElementById('su-email').value;
+      const password = document.getElementById('su-password').value;
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        if (res.ok) {
+          alert('Account created! Please sign in.');
+          signupModal.classList.add('hidden');
+        } else {
+          const msg = await res.text();
+          alert('Sign-up failed: ' + msg);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error signing up');
+      }
+    });
+
+    // --- Spreadsheet Split Logic ---
     let workbook;
     const input = document.getElementById('file-input');
     const splitColumnsBtn = document.getElementById('split-columns-btn');
@@ -89,6 +135,7 @@
     const selectionInput = document.getElementById('selection-input');
     const selectionLabel = document.getElementById('selection-label');
     const runBtn = document.getElementById('run-split');
+    const downloadLinks = document.getElementById('download-links');
     let mode = '';
 
     input.addEventListener('change', e => {
@@ -115,17 +162,17 @@
     });
 
     runBtn.addEventListener('click', () => {
+      if (!workbook) return alert('Please upload a file first');
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       const selections = document.getElementById('selections').value.split(',').map(s => s.trim());
-      const links = document.getElementById('download-links');
-      links.innerHTML = '';
+      downloadLinks.innerHTML = '';
 
       if (mode === 'columns') {
         const headers = json[0];
         selections.forEach(col => {
-          const idx = headers.findIndex(h => h == col);
+          const idx = headers.indexOf(col);
           if (idx > -1) {
             const newData = json.map(row => [row[idx]]);
             const newWs = XLSX.utils.aoa_to_sheet(newData);
@@ -139,13 +186,13 @@
             a.download = `${col}.xlsx`;
             a.textContent = `Download ${col}`;
             a.className = 'block text-blue-600 hover:underline';
-            links.appendChild(a);
+            downloadLinks.appendChild(a);
           }
         });
       } else if (mode === 'rows') {
         const dataRows = json.slice(1);
         selections.forEach(r => {
-          const idx = parseInt(r) - 1;
+          const idx = parseInt(r, 10) - 1;
           if (idx >= 0 && idx < dataRows.length) {
             const newData = [json[0], dataRows[idx]];
             const newWs = XLSX.utils.aoa_to_sheet(newData);
@@ -159,7 +206,7 @@
             a.download = `row_${r}.xlsx`;
             a.textContent = `Download row ${r}`;
             a.className = 'block text-blue-600 hover:underline';
-            links.appendChild(a);
+            downloadLinks.appendChild(a);
           }
         });
       }
