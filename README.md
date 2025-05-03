@@ -7,4 +7,10 @@ Secure Auth: Sign Up and Sign In flows backed by Cloudflare Workers and KV.
 
 Serverless Deployment: Frontend on Cloudflare Pages; backend as Functions (Workers)
 
+
+The core serverless logic for authentication and API routing lives in an index.js file:
+
+Repository: A copy of this Worker entrypoint is present in functions/api/index.js (or your configured entry) so that your Worker code is version-controlled alongside your frontend.
+
+
 Access it here: https://realworldproblem.pages.dev/
