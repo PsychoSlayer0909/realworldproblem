@@ -76,22 +76,26 @@
     const closeSignin = document.getElementById('close-signin');
     signinBtn.addEventListener('click', () => signinModal.classList.remove('hidden'));
     closeSignin.addEventListener('click', () => signinModal.classList.add('hidden'));
+
+    // Sign In
     document.getElementById('signin-form').addEventListener('submit', async e => {
       e.preventDefault();
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
+
       try {
-        const res = await fetch('/api/signin', {
+        const res = await fetch('https://apifinal.mohamedawadalla75.workers.dev/', {  // <-- your Cloudflare Worker API URL
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
         if (res.ok) {
           const user = await res.json();
-          document.getElementById('user-controls').innerHTML = `<span>${user.email}</span>`;
+          document.getElementById('user-controls').innerHTML = `<span>Welcome, ${user.email}</span>`;
           signinModal.classList.add('hidden');
         } else {
-          alert('Sign in failed');
+          const error = await res.text();
+          alert('Sign in failed: ' + error);
         }
       } catch (err) {
         console.error(err);
@@ -104,12 +108,15 @@
     const closeSignup = document.getElementById('close-signup');
     signupBtn.addEventListener('click', () => signupModal.classList.remove('hidden'));
     closeSignup.addEventListener('click', () => signupModal.classList.add('hidden'));
+
+    // Sign Up
     document.getElementById('signup-form').addEventListener('submit', async e => {
       e.preventDefault();
       const email = document.getElementById('su-email').value;
       const password = document.getElementById('su-password').value;
+
       try {
-        const res = await fetch('/api/signup', {
+        const res = await fetch('https://https://apifinal.mohamedawadalla75.workers.dev/', {  // <-- your Cloudflare Worker API URL
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -118,8 +125,8 @@
           alert('Account created! Please sign in.');
           signupModal.classList.add('hidden');
         } else {
-          const msg = await res.text();
-          alert('Sign-up failed: ' + msg);
+          const error = await res.text();
+          alert('Sign-up failed: ' + error);
         }
       } catch (err) {
         console.error(err);
@@ -214,20 +221,3 @@
   </script>
 </body>
 </html>
-
-<!--
-INITIALIZE GIT
-git init
-git add .
-git commit -m "Initial commit"
-
-LINK TO GITHUB
-git remote add origin https://github.com/your-username/your-repo-name.git
-git branch -M main
-git push -u origin main
-
-UPDATE REPO
-git add .
-git commit -m "Updated webpage"
-git push origin main
--->
