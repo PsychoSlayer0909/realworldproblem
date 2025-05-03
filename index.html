@@ -116,7 +116,7 @@
       const password = document.getElementById('su-password').value;
 
       try {
-        const res = await fetch('https://https://apifinal.mohamedawadalla75.workers.dev/', {  // <-- your Cloudflare Worker API URL
+        const res = await fetch('https://apifinal.mohamedawadalla75.workers.dev/', {  // <-- your Cloudflare Worker API URL
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
