@@ -3,9 +3,8 @@ A modern, minimalist web app for splitting uploaded Excel or CSV files by specif
 
 Upload & Split: Accepts .csv, .xls, .xlsx files and splits them by selected columns or row numbers.
 
-Secure Auth: Sign Up, Sign In, and Sign Out flows backed by Cloudflare Workers and KV.
+Secure Auth: Sign Up and Sign In flows backed by Cloudflare Workers and KV.
 
-Password Hashing: Passwords hashed with bcryptjs before storage.
 Serverless Deployment: Frontend on Cloudflare Pages; backend as Functions (Workers)
 
 Access it here: https://realworldproblem.pages.dev/
