@@ -78,30 +78,32 @@
     closeSignin.addEventListener('click', () => signinModal.classList.add('hidden'));
 
     // Sign In
-    document.getElementById('signin-form').addEventListener('submit', async e => {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+   document.getElementById('signin-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
 
-      try {
-        const res = await fetch('https://apifinal.mohamedawadalla75.workers.dev/', {  // <-- your Cloudflare Worker API URL
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        if (res.ok) {
-          const user = await res.json();
-          document.getElementById('user-controls').innerHTML = `<span>Welcome, ${user.email}</span>`;
-          signinModal.classList.add('hidden');
-        } else {
-          const error = await res.text();
-          alert('Sign in failed: ' + error);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Error signing in');
-      }
+  try {
+    // Changed the URL to include the /api/signin path
+    const res = await fetch('https://apifinal.mohamedawadalla75.workers.dev/api/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
     });
+    
+    if (res.ok) {
+      const user = await res.json();
+      document.getElementById('user-controls').innerHTML = `<span>Welcome, ${user.email}</span>`;
+      signinModal.classList.add('hidden');
+    } else {
+      const error = await res.text();
+      alert('Sign in failed: ' + error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error signing in');
+  }
+});
 
     const signupBtn = document.getElementById('signup-btn');
     const signupModal = document.getElementById('signup-modal');
@@ -111,28 +113,30 @@
 
     // Sign Up
     document.getElementById('signup-form').addEventListener('submit', async e => {
-      e.preventDefault();
-      const email = document.getElementById('su-email').value;
-      const password = document.getElementById('su-password').value;
+  e.preventDefault();
+  const email = document.getElementById('su-email').value;
+  const password = document.getElementById('su-password').value;
 
-      try {
-        const res = await fetch('https://https://apifinal.mohamedawadalla75.workers.dev/', {  // <-- your Cloudflare Worker API URL
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        if (res.ok) {
-          alert('Account created! Please sign in.');
-          signupModal.classList.add('hidden');
-        } else {
-          const error = await res.text();
-          alert('Sign-up failed: ' + error);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Error signing up');
-      }
+  try {
+
+    const res = await fetch('https://apifinal.mohamedawadalla75.workers.dev/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
     });
+    
+    if (res.ok) {
+      alert('Account created! Please sign in.');
+      signupModal.classList.add('hidden');
+    } else {
+      const error = await res.text();
+      alert('Sign-up failed: ' + error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error signing up');
+  }
+});
 
     // --- Spreadsheet Split Logic ---
     let workbook;
